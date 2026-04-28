@@ -2,6 +2,7 @@ package com.wallet.service;
 
 import com.wallet.model.Wallet;
 import com.wallet.repository.WalletRepository;
+import com.wallet.exception.CustomException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,7 +13,12 @@ public class WalletService {
     private WalletRepository walletRepository;
 
     public Wallet getWallet(Long userId) {
-        return walletRepository.findByUserId(userId);
+        Wallet wallet=walletRepository.findByUserId(userId);
+        
+        if (wallet == null) {
+            throw new CustomException("Wallet not found for user: " + userId);
+        }
+        return wallet;
     }
 
     @Transactional
@@ -21,11 +27,11 @@ public class WalletService {
         Wallet wallet = walletRepository.findByUserIdForUpdate(userId);
 
         if (wallet == null) {
-            throw new RuntimeException("Wallet not found");
+            throw new CustomException("Wallet not found");
         }
 
         if (amount <= 0) {
-            throw new RuntimeException("Invalid amount");
+            throw new CustomException("Invalid amount");
         }
 
         wallet.setBalance(wallet.getBalance() + amount);
@@ -37,18 +43,18 @@ public class WalletService {
     public String transferMoney(Long senderId, Long receiverId, Double amount) {
 
         if (amount <= 0) {
-            throw new RuntimeException("Invalid amount");
+            throw new CustomException("Invalid amount");
         }
 
         Wallet senderWallet = walletRepository.findByUserIdForUpdate(senderId);
         Wallet receiverWallet = walletRepository.findByUserIdForUpdate(receiverId);
 
         if (senderWallet == null || receiverWallet == null) {
-            throw new RuntimeException("Wallet not found");
+            throw new CustomException("Wallet not found");
         }
 
         if (senderWallet.getBalance() < amount) {
-            throw new RuntimeException("Insufficient balance");
+            throw new CustomException("Insufficient balance");
         }
 
         senderWallet.setBalance(senderWallet.getBalance() - amount);
