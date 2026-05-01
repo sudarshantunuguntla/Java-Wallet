@@ -3,6 +3,10 @@ package com.wallet.controller;
 import com.wallet.model.Wallet;
 import com.wallet.repository.WalletRepository;
 import com.wallet.service.WalletService;
+import com.wallet.dto.ApiResponse;
+import com.wallet.exception.CustomException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,17 +18,24 @@ public class WalletController{
     private WalletService walletService;
 
     @GetMapping("/{userId}")
-    public Wallet getWalletByUserId(@PathVariable Long userId){
-        return walletService.getWallet(userId);
+    public ApiResponse<Wallet> getWalletByUserId(@PathVariable Long userId,HttpServletRequest request) {
+
+        String email = (String) request.getAttribute("userEmail");
+
+        Wallet wallet= walletService.getWallet(userId,email);
+        return new ApiResponse<>(true, "Wallet Fetched", wallet);
     }
     @PostMapping("/add")
-    public Wallet addMoney(@RequestParam Long userId, @RequestParam Double amount){
-
-        return walletService.addMoney(userId, amount);
+    public ApiResponse<Wallet> addMoney(@RequestParam Double amount,HttpServletRequest request){
+        String email = (String) request.getAttribute("userEmail");
+        Wallet wallet = walletService.addMoney(amount,email);
+        return new ApiResponse<>(true, "Money added successfully", wallet);
     }
     @PostMapping("/transfer")
-    public String transferMoney(@RequestParam Long senderId, @RequestParam Long receiverId, @RequestParam Double amount){
-        return walletService.transferMoney(senderId, receiverId, amount);
+    public ApiResponse<String> transferMoney(@RequestParam Long receiverId, @RequestParam Double amount,HttpServletRequest request){
+        String email = (String) request.getAttribute("userEmail");
+        String result= walletService.transferMoney(receiverId, amount, email);
+        return new ApiResponse<>(true,result,null);
         
     }
 }

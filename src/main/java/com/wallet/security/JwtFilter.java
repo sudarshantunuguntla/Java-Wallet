@@ -30,6 +30,8 @@ public class JwtFilter extends OncePerRequestFilter {
             try {
                 String email = jwtUtil.extractEmail(token);
                 // token valid → allow request
+                // store email in request
+                request.setAttribute("userEmail", email);
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
@@ -43,6 +45,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 return;
             }
         }
+        //String email = jwtUtil.extractEmail(token);
 
         filterChain.doFilter(request, response);
     }

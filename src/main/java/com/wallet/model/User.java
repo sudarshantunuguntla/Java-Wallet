@@ -16,6 +16,7 @@ public class User {
 
     @NotBlank(message = "Email cannot be empty")
     @Email(message = "Invalid email format")
+    @Column(unique = true)
     private String email;
 
     @NotBlank(message = "Password cannot be empty")

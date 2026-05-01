@@ -25,14 +25,23 @@ public class UserService {
     private JwtUtil jwtUtil;
 
     public String login(String email, String password) {
+        
         User user = userRepository.findByEmail(email);
+
         if (user == null || !user.getPassword().equals(password)) {
             throw new CustomException("Invalid credentials");
         }
         return jwtUtil.generateToken(email);
     }
 
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
     public UserResponseDTO createUser(User user) {
+        if (userRepository.findByEmail(user.getEmail()) != null) {
+            throw new CustomException("Email already exists");
+        }
         User savedUser = userRepository.save(user);
         Wallet wallet = new Wallet();
         wallet.setUser(savedUser);
