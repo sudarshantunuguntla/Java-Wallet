@@ -29,4 +29,13 @@ public class JwtUtil {
                 .getBody()
                 .getSubject();
     }
+
+    public String generateRefreshToken(String email) {
+        return Jwts.builder()
+                .setSubject(String.valueOf(email))
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7)) // 7 days
+                .signWith(key)
+                .compact();
+    }
 }

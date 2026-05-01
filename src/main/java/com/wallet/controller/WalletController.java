@@ -5,6 +5,8 @@ import com.wallet.repository.WalletRepository;
 import com.wallet.service.WalletService;
 import com.wallet.dto.ApiResponse;
 import com.wallet.exception.CustomException;
+import org.springframework.data.domain.Page;
+import com.wallet.dto.TransactionResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,5 +39,19 @@ public class WalletController{
         String result= walletService.transferMoney(receiverId, amount, email);
         return new ApiResponse<>(true,result,null);
         
+    }
+
+    @GetMapping("/transactions")
+    public ApiResponse<Page<TransactionResponseDTO>> getTransactions(
+            @RequestParam int page,
+            @RequestParam int size,
+            HttpServletRequest request) {
+
+        String email = (String) request.getAttribute("userEmail");
+
+        Page<TransactionResponseDTO> transactions =
+                walletService.getTransactions(email, page, size);
+
+        return new ApiResponse<>(true, "Transaction history", transactions);
     }
 }
