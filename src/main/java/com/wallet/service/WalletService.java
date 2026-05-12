@@ -8,9 +8,13 @@ import com.wallet.model.Transaction;
 import com.wallet.repository.TransactionRepository;
 import com.wallet.exception.CustomException;
 import com.wallet.dto.TransactionResponseDTO;
+import com.wallet.dto.TransferResponseDTO;
+import com.wallet.dto.UserWalletDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.CacheManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +31,13 @@ public class WalletService {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private CacheManager cacheManager;
+
+    @Cacheable(value = "wallet", key = "#email")
     public Wallet getWallet(Long userId,String email) {
+
+        System.out.println("Fetching from DB...");
         Wallet wallet=walletRepository.findByUserId(userId);
         User user = userService.getUserByEmail(email);
         if (user == null) {
@@ -73,7 +83,7 @@ public class WalletService {
     }
 
     @Transactional
-    public String transferMoney(Long receiverId,Double amount,String email) {
+    public TransferResponseDTO transferMoney(Long receiverId,Double amount,String email) {
 
         if (amount <= 0) {
             throw new CustomException("Invalid amount");
@@ -82,6 +92,7 @@ public class WalletService {
 
         Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId());
         Wallet receiverWallet = walletRepository.findByUserIdForUpdate(receiverId);
+        
         if (sender.getId().equals(receiverId)) {
             throw new CustomException("Sender and receiver cannot be the same");
         }
@@ -92,6 +103,9 @@ public class WalletService {
         if (senderWallet == null || receiverWallet == null) {
             throw new CustomException("Wallet not found");
         }
+        
+        // Get receiver email for cache eviction
+        User receiver = userService.getUserById(receiverId);
 
         if (senderWallet.getBalance() < amount) {
             throw new CustomException("Insufficient balance");
@@ -103,6 +117,12 @@ public class WalletService {
         walletRepository.save(senderWallet);
         walletRepository.save(receiverWallet);
 
+        UserWalletDTO senderDTO =
+            new UserWalletDTO(sender.getId(), senderWallet.getBalance());
+
+        UserWalletDTO receiverDTO =
+            new UserWalletDTO(receiverId, receiverWallet.getBalance());
+
         Transaction txn = new Transaction();
         txn.setSenderId(sender.getId());
         txn.setReceiverId(receiverId);
@@ -113,7 +133,14 @@ public class WalletService {
 
         transactionRepository.save(txn);
 
-        return "Transfer successful";
+        // Invalidate cache for both sender and receiver
+        cacheManager.getCache("wallet").evict(email);
+        cacheManager.getCache("wallet").evict(receiver.getEmail());
+
+        return new TransferResponseDTO(
+            senderDTO,
+            receiverDTO
+        );
     }
 
     public Page<TransactionResponseDTO> getTransactions(String email, int page, int size) {
@@ -134,7 +161,7 @@ public class WalletService {
             dto.setSenderId(txn.getSenderId());
             dto.setReceiverId(txn.getReceiverId());
 
-            // 🔥 Core logic
+            // Core logic
             if ("CREDITLOAD".equals(txn.getType())) {
 
                 dto.setType("CREDITLOAD");

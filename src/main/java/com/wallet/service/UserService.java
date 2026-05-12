@@ -100,6 +100,11 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
+    public User getUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException("User not found with id: " + userId));
+    }
+
     public UserResponseDTO createUser(User user) {
         if (userRepository.findByEmail(user.getEmail()) != null) {
             throw new CustomException("Email already exists");
